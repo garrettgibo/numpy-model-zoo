@@ -1,6 +1,23 @@
-"""Custom Decision Tree"""
+"""
+Custom Decision Tree
+"""
+from abc import ABC, abstractmethod
+from typing import Tuple
 import numpy as np
-from modelzoo import Model
+
+
+class Model(ABC):
+    def __repr__(self):
+        return self.__class__.__name__
+
+    @abstractmethod
+    def score(self, data, labels):
+        pass
+
+
+class InvalidModel:
+    def __init__(self):
+        raise SystemExit("No model or Invalid model provided")
 
 
 class DecisionTree(Model):
@@ -17,17 +34,14 @@ class DecisionTree(Model):
 
     """
 
-    def __init__(self, max_depth = 1000, size_allowed = 1,
-                 n_features = None, n_split = None):
+    def __init__(self, max_depth = 1000, size_allowed=1, n_features=None, n_split=None):
         """
-
         Initializations for class attributes.
 
         TODO: 1. Modify the initialization of the attributes of the
         Decision Tree classifier
         DONE
         """
-
         self.root = 1
         self.max_depth = max_depth
         self.size_allowed = size_allowed
@@ -64,7 +78,7 @@ class DecisionTree(Model):
             self.depth = 1
             self.predict = 1
 
-    def entropy(self, lst: np.array):
+    def entropy(self, lst: np.array) -> float:
         """
         Function Calculate the entropy given lst.
 
@@ -79,80 +93,83 @@ class DecisionTree(Model):
 
 
         TODO: 3. Intilize attributes.
+            DONE
               4. Modify and add some codes to the following for-loop
                  to compute the correct entropy.
                  (make sure count of corresponding label is not 0,
                  think about why we need to do that.)
+            DONE
         """
 
         entro = 0
         classes, counts = np.unique(lst, return_counts=True)
-        # counts = []
-        total_counts = sum(counts)
-        counts = counts / total_counts  # normalize counts
+        # total_counts = sum(counts)
+        counts = counts / sum(counts)  # normalize counts
         for count in counts:
             if count == 0:
-                # entro = entro - 0
                 continue
             entro -= count * np.log(count)
         return entro
 
-    def information_gain(self, lst: np.array, values: np.array, threshold):
+    def information_gain(self, lst: np.array, values: np.array, threshold) -> float:
         """
+        Function Calculate the information gain, by using entropy
+        function.
 
-            Function Calculate the information gain, by using entropy
-            function.
-
-            lst is vector of labels.D
-            values is vector of values for individule feature.
-            threshold is the split threshold we want to use for
-            calculating the entropy.
+        lst is vector of labels.D
+        values is vector of values for individule feature.
+        threshold is the split threshold we want to use for
+        calculating the entropy.
 
 
-            TODO:
-                5. Modify the following variable to calculate the
-                   P(left node), P(right node),
-                   Conditional Entropy(left node) and Conditional
-                   Entropy(right node)
-                6. Return information gain.
+        TODO:
+            5. Modify the following variable to calculate the
+               P(left node), P(right node),
+               Conditional Entropy(left node) and Conditional
+               Entropy(right node)
+            DONE
+            6. Return information gain.
+            DONE
 
         IG(Z) = H(X) - H(X|Z)
         """
-        left_prop = 1
-        righ_prop = 1
+        left_side = values < threshold
+        left_prop = len(values[left_side]) / len(values)
+        right_prop = 1 - left_prop
 
-        left_entropy = 1
-        right_entropy = 1
+        left_entropy = self.entropy(lst[left_side])
+        right_entropy = self.entropy(lst[~left_side])
 
+        return (
+            self.entropy(lst) - (
+                left_prop * left_entropy + right_prop * right_entropy
+            )
+        )
 
-        return 1
-
-    def find_rules(self, data: np.ndarray):
-
+    def find_rules(self, data: np.ndarray) -> np.ndarray:
         """
+        Helper function to find the split rules.
 
-            Helper function to find the split rules.
+        data is a matrix or 2-D numpy array, represnting training
+        instances.
+        Each training instance is a feature vector.
 
-            data is a matrix or 2-D numpy array, represnting training
-            instances.
-            Each training instance is a feature vector.
-
-            TODO: 7. Modify the following for loop, which loop through
-                     each column(feature).
-                     Find the unique value of each feature, and find
-                     the mid point of each adjacent value.
-                  8. Store them in a list, return that list.
-
+        TODO: 7. Modify the following for loop, which loop through
+                 each column(feature).
+                 Find the unique value of each feature, and find
+                 the mid point of each adjacent value.
+              8. Store them in a list, return that list.
         """
-        n,m = 1,1
+        n, m = 1, 1
         rules = []
-        for i in []:
-            unique_value = []
-            diff  = []
-            rules.append(1)
+        # transpose data to get features(columns)
+        for feature in data.T:
+            unique_value = np.unique(feature)
+        diff  = []
+        rules.append(1)
         return rules
 
-    def next_split(self, data: np.ndarray, label: np.array):
+    def next_split(self, data: np.ndarray, label: np.array) -> Tuple[float, int]:
         """
             Helper function to find the split with most information
             gain, by using find_rules, and information gain.
@@ -165,11 +182,13 @@ class DecisionTree(Model):
             multiple (i.e., > 2) classes.
 
             TODO: 9. Use find_rules to initialize rules variable
+            DONE
                   10. Initialize max_info to some negative number.
+                  DONE
         """
 
-        rules = []
-        max_info = 1
+        rules = self.find_rules(data)
+        max_info = -1
         num_col = 1
         threshold = 1
         entropy_y = 1
@@ -178,49 +197,56 @@ class DecisionTree(Model):
         """
             TODO: 11. Check Number of features to use, None means all
                       featurs. (Decision Tree always use all feature)
+                      DONE
                       If n_features is a int, use n_features of features
                           by random choice.
                       If n_features == 'sqrt', use sqrt(Total Number of
                           Features ) by random choice.
+                      DONE
 
 
         """
-
-
-        if True :
-            index_col = []
+        if self.n_features is None:
+            index_col = np.arange(data.shape[1])
         else:
-            if True:
-                num_index = 1
-            elif True:
-                num_index = 1
+            if isinstance(self.n_features, int):
+                num_index = self.n_features
+            elif isinstance(self.n_features, str):
+                num_index = np.sqrt(self.n_features)
             np.random.seed()
-            index_col = np.random.choice(data.shape[1], num_index, replace = False)
+            index_col = np.random.choice(
+                data.shape[1], num_index, replace=False
+            )
 
-        """
+            """
 
             TODO: 12. Do the similar selection we did for features,
                       n_split take in None or int or 'sqrt'.
+                      DONE
                   13. For all selected feature and corresponding rules,
                       we check it's information gain.
 
         """
+        # Moving through columns
         for i in index_col:
             count_temp_rules = 1
 
-            if True :
-                index_rules = []
+            # determine index splits for each row
+            if self.n_split is None:
+                index_rules = np.arange(data.shape[1])
             else:
-
-                if True:
-                    num_rules = 1
-                elif True:
-                    num_rules = 1
+                if isinstance(self.n_split, int):
+                    num_rules = self.n_split
+                elif isinstance(self.n_split, str):
+                    num_rules = np.sqrt(self.n_split)
                 np.random.seed()
-                index_rules = np.random.choice(count_temp_rules, num_rules, replace = False)
+                index_rules = np.random.choice(
+                    count_temp_rules, num_rules, replace=False
+                )
 
-            for j in []:
-                info = 1
+
+            for j in index_rules:
+                info = self.information_gain(lst, values, threshold)
                 if info > max_info:
                     max_info = info
                     num_col = i
@@ -228,74 +254,70 @@ class DecisionTree(Model):
         return threshold, num_col
 
     def build_tree(self, X, y, depth):
+        """
+            Helper function for building the tree.
 
-            """
-                Helper function for building the tree.
-
-                TODO: 14. First build the root node.
-            """
-
-
-            first_threshold, first_feature = 1,1
-            current = self.Node(first_threshold, first_feature)
-
-            """
-                TODO: 15. Base Case 1: Check if we pass the max_depth,
-                          check if the first_feature is None, min split
-                          size.
-                          If some of those condition met, change current
-                          to pure, and set predict to the most popular label
-                          and return current
+            TODO: 14. First build the root node.
+        """
 
 
-            """
-            if False :
-                current.predict = y[0]
-                current.pure = True
-                return current
+        first_threshold, first_feature = 1,1
+        current = self.Node(first_threshold, first_feature)
 
-            """
-               Base Case 2: Check if there is only 1 label in this node,
-               change current to pure, and set predict to the label
-            """
-
-            if len(np.unique(y)) == 1:
-                current.predict = y[0]
-                current.pure = True
-                return current
-
-            """
-                TODO: 16. Find the left node index with feature
-                i <= threshold  Right with feature i > threshold.
-            """
+        """
+            TODO: 15. Base Case 1: Check if we pass the max_depth,
+                      check if the first_feature is None, min split
+                      size.
+                      If some of those condition met, change current
+                      to pure, and set predict to the most popular label
+                      and return current
 
 
+        """
+        if False :
+            current.predict = y[0]
+            current.pure = True
+            return current
 
-            left_index = [0]
-            right_index = [1]
+        """
+           Base Case 2: Check if there is only 1 label in this node,
+           change current to pure, and set predict to the label
+        """
 
-            """
-                TODO: 17. Base Case 3: If we either side is empty, change
-                current to pure, and set predict to the label
-            """
-            if False:
-                current.predict = None
-                current.pure = None
-                return current
+        if len(np.unique(y)) == 1:
+            current.predict = y[0]
+            current.pure = True
+            return current
+
+        """
+            TODO: 16. Find the left node index with feature
+            i <= threshold  Right with feature i > threshold.
+        """
 
 
-            left_X, left_y = X[left_index,:], y[left_index]
-            current.left = self.build_tree(left_X, left_y, depth + 1)
 
-            right_X, right_y = X[right_index,:], y[right_index]
-            current.right = self.build_tree(right_X, right_y, depth + 1)
+        left_index = [0]
+        right_index = [1]
 
+        """
+            TODO: 17. Base Case 3: If we either side is empty, change
+            current to pure, and set predict to the label
+        """
+        if False:
+            current.predict = None
+            current.pure = None
             return current
 
 
+        left_X, left_y = X[left_index,:], y[left_index]
+        current.left = self.build_tree(left_X, left_y, depth + 1)
+
+        right_X, right_y = X[right_index,:], y[right_index]
+        current.right = self.build_tree(right_X, right_y, depth + 1)
+
+        return current
 
     def fit(self, X, y):
-
         """
             The fit function fits the Decision Tree model based on
             the training data.
@@ -351,3 +373,8 @@ class DecisionTree(Model):
         for i in range(inp.shape[0]):
             result.append(self.for_runing)
         return result
+
+    def score(self, data, labels, datatype="Test"):
+        pred = self.predict(data)
+        avg_accuracy = (pred == labels).mean()
+        print(f"{datatype} Error: {avg_accuracy}")
