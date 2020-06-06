@@ -4,6 +4,7 @@ Custom Decision Tree
 from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
+from tqdm import tqdm
 
 
 class Model(ABC):
@@ -35,12 +36,12 @@ class DecisionTree(Model):
     """
 
     def __init__(self, max_depth=1000, size_allowed=1, n_features=None, n_split=None):
-        """
-        Initializations for class attributes.
+        """Decision Tree initialization.
 
-        TODO: 1. Modify the initialization of the attributes of the
-        Decision Tree classifier
-        DONE
+        :param max_depth: maximum amount of recursion for tree to create nodes
+        :param size_allowed: minimum node size
+        :param n_features: number of features to evaluate for decisions
+        :param n_split: number of splits to do on features
         """
         self.root = 1
         self.max_depth = max_depth
@@ -63,13 +64,11 @@ class DecisionTree(Model):
                 node.
         """
 
-        def __init__(self, threshold=None, feature=None):
-            """
-            Initializations for class attributes.
+        def __init__(self, threshold: float = None, feature: int = None):
+            """Decision Tree Node initialization.
 
-            TODO: 2. Modify the initialization of the attributes of
-                the Node. (Initialize threshold and feature)
-            DONE
+            :param threshold: threshold to split features on
+            :param feature: feature index to split on
             """
             self.threshold = threshold
             self.feature = feature
@@ -80,32 +79,14 @@ class DecisionTree(Model):
             self.predict = -1
 
     def entropy(self, labels: np.array) -> float:
+        """Calculate entropy for provided labels.
+
+        :param labels: vector of labels to calculate entropy on
+        :returns: calculated entropy
         """
-        Function Calculate the entropy given labels.
-
-        Attributes:
-            entro: variable store entropy for each step.
-            classes: all possible classes. (without repeating terms)
-            counts: counts of each possible classes.
-            total_counts: number of instances in this labels.
-
-        labels is vector of labels.
-
-
-
-        TODO: 3. Intilize attributes.
-            DONE
-              4. Modify and add some codes to the following for-loop
-                 to compute the correct entropy.
-                 (make sure count of corresponding label is not 0,
-                 think about why we need to do that.)
-            DONE
-        """
-
         entro = 0
         classes, counts = np.unique(labels, return_counts=True)
-        # total_counts = sum(counts)
-        counts = counts / sum(counts)  # normalize counts
+        counts = counts / sum(counts)  # normalize counts to get prob of class
         for count in counts:
             if count == 0:
                 continue
@@ -115,26 +96,14 @@ class DecisionTree(Model):
     def information_gain(
         self, values: np.array, labels: np.array, threshold: float
     ) -> float:
-        """
-        Function Calculate the information gain, by using entropy
-        function.
-
-        labels is vector of labels.D
-        values is vector of values for individule feature.
-        threshold is the split threshold we want to use for
-        calculating the entropy.
-
-
-        TODO:
-            5. Modify the following variable to calculate the
-               P(left node), P(right node),
-               Conditional Entropy(left node) and Conditional
-               Entropy(right node)
-            DONE
-            6. Return information gain.
-            DONE
+        """Calculate the information gain, by using entropy function.
 
         IG(Z) = H(X) - H(X|Z)
+
+        :param values: single vector of values to calculate IG
+        :param labels: vector of all labels
+        :param threshold: threshold to calculate IG off of
+        :returns: calculate IG based off information gain formula
         """
         left_side = values < threshold
         left_prop = len(values[left_side]) / len(values)
@@ -148,86 +117,53 @@ class DecisionTree(Model):
         )
 
     def find_rules(self, data: np.ndarray) -> np.ndarray:
-        """
-        Helper function to find the split rules.
+        """Helper method to find the split rules.
 
-        data is a matrix or 2-D numpy array, represnting training
-        instances.
-        Each training instance is a feature vector.
+        Splitting rules are found by finding all unique values in a feature,
+        then finding all the midpoints for the unique values.
 
-        TODO: 7. Modify the following for loop, which loop through
-                 each column(feature).
-                 Find the unique value of each feature, and find
-                 the mid point of each adjacent value.
-              8. Store them in a list, return that list.
-              DONE
+        :param data: matrix or 2-D numpy array, represnting training instances
+        :returns: 2-D array of all possible splits for features
         """
-        # n, m = 1, 1
         rules = []
         # transpose data to get features(columns)
         for feature in data.T:
             unique_values = np.unique(feature)
-            # diff = []
-            midpoints = np.mean([unique_values[:-1], unique_values[1:]], axis=0)
-            rules.append(midpoints)
+            mids = np.mean([unique_values[:-1], unique_values[1:]], axis=0)
+            rules.append(mids)
         return rules
 
     def next_split(self, data: np.ndarray, labels: np.array) -> Tuple[float, int]:
-        """
-        Helper function to find the split with most information
-        gain, by using find_rules, and information gain.
+        """Helper method to find the split with most information.
 
-        data is a matrix or 2-D numpy array, represnting training
-        instances.
-        Each training instance is a feature vector.
-
-        label contains the corresponding labels. There might be
-        multiple (i.e., > 2) classes.
-
-        TODO: 9. Use find_rules to initialize rules variable
-        DONE
-              10. Initialize max_info to some negative number.
-              DONE
+        :param data: matrix or 2-D numpy array, represnting training instances
+            Each training instance is a feature vector.
+        :param labels: label contains the corresponding labels. There might be
+            multiple (i.e., > 2) classes.
         """
         rules = self.find_rules(data)
         max_info = -1
         num_col = 1
         threshold = 1
 
-        """
-        TODO: 11. Check Number of features to use, None means all
-                  featurs. (Decision Tree always use all feature)
-                  DONE
-                  If n_features is a int, use n_features of features
-                      by random choice.
-                  If n_features == 'sqrt', use sqrt(Total Number of
-                      Features ) by random choice.
-                  DONE
-        """
+        # when number of features wasn't set, use all features
         if self.n_features is None:
             index_col = np.arange(data.shape[1])
         else:
             if isinstance(self.n_features, int):
                 num_index = self.n_features
+            # if num of featuers is 'sqrt' use sqrt of total number of features
             elif isinstance(self.n_features, str):
                 num_index = round(np.sqrt(data.shape[1]))
                 np.random.seed()
                 index_col = np.random.choice(data.shape[1], num_index, replace=False)
 
-        """
-        TODO: 12. Do the similar selection we did for features,
-                  n_split take in None or int or 'sqrt'.
-                  DONE
-              13. For all selected feature and corresponding rules,
-                  we check it's information gain.
-        """
         # Moving through columns
         for i in index_col:
             count_temp_rules = len(rules[i])
 
-            # determine index splits for each row
+            # when number of splits wasn't set, use all splits
             if self.n_split is None:
-                index_rules = np.arange(data.shape[1])
                 index_rules = np.arange(count_temp_rules)
             else:
                 if isinstance(self.n_split, int):
@@ -237,11 +173,11 @@ class DecisionTree(Model):
                     if num_rules > count_temp_rules:
                         num_rules = count_temp_rules
                     np.random.seed()
-
                     index_rules = np.random.choice(
                         count_temp_rules, num_rules, replace=False
                     )
 
+            # find split and threshold that results in maximum information gain
             for j in index_rules:
                 info = self.information_gain(data.T[i], labels, rules[i][j])
                 if info > max_info:
@@ -251,59 +187,45 @@ class DecisionTree(Model):
         return threshold, num_col
 
     def build_tree(self, X: np.ndarray, y: np.array, depth: int) -> Node:
-        """
-            Helper function for building the tree.
+        """ Helper function for building the tree.
 
-            TODO: 14. First build the root node.
+        :param X: full data set to train from
+        :param y: full vector of labels
+        :returns: root Node
         """
         first_threshold, first_feature = self.next_split(X, y)
         current = self.Node(first_threshold, first_feature)
 
-        """
-            TODO: 15. Base Case 1: Check if we pass the max_depth,
-                      check if the first_feature is None, min split
-                      size.
-                      If some of those condition met, change current
-                      to pure, and set predict to the most popular label
-                      and return current
-                    DONE?
-
-
-        """
-        if depth > self.max_depth or first_feature is None \
-                or X.shape[0] == self.size_allowed:
+        # base case 1 to end build early
+        if (
+            depth > self.max_depth
+            or first_feature is None
+            or X.shape[0] == self.size_allowed
+        ):
             current.predict = np.argmax(np.bincount(y))
             current.pure = True
             return current
 
-        """
-           Base Case 2: Check if there is only 1 label in this node,
-           change current to pure, and set predict to the label
-        """
+        # base case 2: node has become a leaf
         if len(np.unique(y)) == 1:
             current.pure = True
             current.predict = y[0]
             return current
 
-        """
-            TODO: 16. Find the left node index with feature
-            i <= threshold  Right with feature i > threshold.
-        """
+        # Find the left node index with feature i <= threshold
+        # Right with feature i > threshold.
         left_index = X.T[first_feature] <= first_threshold
         right_index = X.T[first_feature] > first_threshold
 
-        """
-            TODO: 17. Base Case 3: If we either side is empty, change
-            current to pure, and set predict to the label
-            DONE
-        """
+        # base case 3: either side is empty
         if sum(left_index) == 0 or sum(right_index) == 0:
-            # NOTE this is being set to the first label, but it may be better to
-            # set this to the most common label
+            # NOTE this is being set to the first label, but it may be better
+            # to set this to the most common label
             current.predict = y[0]
             current.pure = True
             return current
 
+        # recusively build rest of tree
         left_X, left_y = X[left_index, :], y[left_index]
         current.left = self.build_tree(left_X, left_y, depth + 1)
 
@@ -312,66 +234,58 @@ class DecisionTree(Model):
 
         return current
 
-    def fit(self, X: np.ndarray, y: np.array) -> None:
-        """
-            The fit function fits the Decision Tree model based on
-            the training data.
+    def fit(self, X: np.ndarray, y: np.array):
+        """ Fits the Decision Tree model based on the training data.
 
-            X_train is a matrix or 2-D numpy array, represnting
-            training instances.
+        :param X: matrix or 2-D numpy array, represnting training instances.
             Each training instance is a feature vector.
-
-            y_train contains the corresponding labels. There might
-            be multiple (i.e., > 2) classes.
+        :param y: labels for data. There might be multiple (i.e., > 2) classes.
         """
         self.root = self.build_tree(X, y, 1)
-        # self.for_runing = y[0]
-        # return self
+        return self
 
     def ind_predict(self, vector: np.array) -> int:
-        """
-            Predict the most likely class label of one test
-            instance based on its feature vector x.
+        """Predict the most likely class label of one test instance.
 
-            TODO: 18. Modify the following while loop to get the prediction.
-                      Stop condition we are at a node is pure.
-                      Trace with the threshold and feature.
-                      DONE
-                19. Change return self.for_runing to appropiate value.
-                DONE
+        :param vector: single vector to predict
+        :returns: class predicted
         """
         current = self.root
         while not current.pure:
             feature = current.feature
             threshold = current.threshold
-            current = current.left if vector[feature] < threshold else current.right
+            if vector[feature] < threshold:
+                current = current.left
+            else:
+                current = current.right
         return current.predict
 
     def predict(self, X: np.ndarray) -> np.array:
+        """Predict labels for entire dataset.
+
+        :param X: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param y: labels for data. There might be multiple (i.e., > 2) classes.
+        :returns: predictions of all instances in a list.
         """
-            X is a matrix or 2-D numpy array, represnting testing
-            instances.
-            Each testing instance is a feature vector.
+        return np.array([self.ind_predict(vect) for vect in X])
 
-            Return the predictions of all instances in a list.
+    def score(self, data: np.ndarray, labels: np.array, datatype="Test") -> float:
+        """Wrapper around predict to also get accuracy.
 
-            TODO: 20. Revise the following for-loop to call
-            ind_predict to get predictions.
-            DONE
+        :param data: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param labels: labels for data. There might be multiple (i.e., > 2) classes.
+        :returns: avg_accuracy of predictions
         """
-        result = np.array([self.ind_predict(vect) for vect in X])
-        return result
-
-    def score(self, data: np.ndarray, labels: np.array, datatype="Test"):
         pred = self.predict(data)
         avg_accuracy = (pred == labels).mean()
         print(f"{datatype} accuracy: {avg_accuracy}")
+        return avg_accuracy
 
 
 class RandomForest(Model):
-    """
-
-    RandomForest Classifier
+    """RandomForest Classifier
 
     Attributes:
         n_trees: Number of trees.
@@ -380,23 +294,17 @@ class RandomForest(Model):
         n_split: Number of split for each feature.
         max_depth: Max depth allowed for the tree
         size_allowed : Min_size split, smallest size allowed for split
-
     """
 
     def __init__(
         self,
-        n_trees=10,
+        n_trees=25,
         n_features="sqrt",
-        n_split="sqrt",
+        n_split=None,
         max_depth=1000,
         size_allowed=1,
     ):
-        """
-        Initilize all Attributes.
-
-        TODO: 1. Intialize n_trees, n_features, n_split, max_depth, size_allowed.
-        DONE
-        """
+        """Random Forest initialization"""
         self.n_trees = n_trees
         self.trees = []
         self.n_features = n_features
@@ -405,71 +313,55 @@ class RandomForest(Model):
         self.size_allowed = size_allowed
 
     def fit(self, X: np.ndarray, y: np.array) -> None:
+        """ Fits the Random Forest model based on the training data.
+
+        :param X: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param y: labels for data. There might be multiple (i.e., > 2) classes.
         """
-        The fit function fits the Random Forest model based on the training data.
-
-        X_train is a matrix or 2-D numpy array, represnting training instances.
-        Each training instance is a feature vector.
-
-        y_train contains the corresponding labels. There might be multiple
-        (i.e., > 2) classes.
-
-
-        TODO: 2. Modify the following for loop to create n_trees tress. by
-        calling DecisionTree we created.
-                 Pass in all the attributes.
-        """
-        self.for_running = y[4]
-
-        for i in range(self.n_trees):
+        for i in tqdm(range(self.n_trees), desc="Fitting Forest"):
             np.random.seed()
+            # initialize tree with all parameters from forest
             temp_clf = DecisionTree(
-                max_depth=self.max_depth, size_allowed=self.size_allowed,
-                n_features=self.n_features, n_split=self.n_split
+                max_depth=self.max_depth,
+                size_allowed=self.size_allowed,
+                n_features=self.n_features,
+                n_split=self.n_split,
             )
             temp_clf.fit(X, y)
             self.trees.append(temp_clf)
         return self
 
-    def ind_predict(self, vector):
-        """
-        Predict the most likely class label of one test instance based on its
-        feature vector x.
+    def ind_predict(self, vector: np.array) -> float:
+        """Predict the most likely class label of one test instance.
 
-        TODO: 4. Modify the following code to predict using each Decision Tree.
+        :param vector: single vector to predict
+        :returns: class predicted
         """
-        # result = []
-        # for i in self.trees:
-        #     result.append(self.predict(vector))
+        # predict using majority rule from doing predictions from all trees
         results = np.array([tree.ind_predict(vector) for tree in self.trees])
-
-        """
-        TODO: 5. Modify the following code to find the correct prediction use
-            majority rule.
-                 If there is a tie, use random choice to select one of them.
-        """
-        # labels, counts = [result[0]], [len(result)]
         labels, counts = np.unique(results, return_counts=True)
         return labels[np.argmax(counts)]
 
     def predict_all(self, X: np.ndarray) -> np.array:
-        """
-        X is a matrix or 2-D numpy array, represnting testing instances.
-        Each testing instance is a feature vector.
+        """Predict labels for entire dataset.
 
-        Return the predictions of all instances in a list.
-
-        TODO: 6. Revise the following for-loop to call ind_predict to get predictions
-        DONE
+        :param X: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param y: labels for data. There might be multiple (i.e., > 2) classes.
+        :returns: predictions of all instances in a list.
         """
-        # result = []
-        # for i in range(inp.shape[0]):
-        #     result.append(self.for_running)
-        # return result
-        result = np.array([self.ind_predict(vect) for vect in X])
-        return result
+        return np.array([self.ind_predict(vect) for vect in X])
 
     def score(self, data: np.ndarray, labels: np.array, datatype="Test"):
+        """Wrapper around predict_all to also get accuracy.
+
+        :param data: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param labels: labels for data. There might be multiple (i.e., > 2) classes.
+        :returns: avg_accuracy of predictions
+        """
         pred = self.predict_all(data)
         avg_accuracy = (pred == labels).mean()
         print(f"{datatype} accuracy: {avg_accuracy}")
+        return avg_accuracy
