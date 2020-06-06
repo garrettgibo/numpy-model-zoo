@@ -1,0 +1,40 @@
+name: Style/Formatting CI
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  flake8_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Checkout py-planner
+        uses: actions/checkout@master
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install flake8 pipenv
+      - name: Lint with flake8
+        run: pipenv run lint --statistics
+
+  black_format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Checkout py-planner
+        uses: actions/checkout@master
+      - name: Install Black
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install black
+      - name: Check Formatting with Black
+        run: black --check **/*.py
