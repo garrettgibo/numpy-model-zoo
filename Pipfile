@@ -12,6 +12,7 @@ pandas = "*"
 numpy = "*"
 sklearn = "*"
 tqdm = "*"
+notebook = "*"
 
 [requires]
 python_version = "3.8"
@@ -23,3 +24,4 @@ allow_prereleases = true
 format = "black"
 lint = "flake8"
 main = "python main.py"
+notebook = "jupyter notebook"
