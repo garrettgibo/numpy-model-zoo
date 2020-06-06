@@ -52,7 +52,7 @@ def main(model_type):
     clf = model()  # initialize model with default parameters
     clf.fit(X_train, y_train)
 
-    print("-"*10, clf, "-"*10)
+    print("-" * 10, clf, "-" * 10)
     score_train = clf.score(X_train, y_train)
     score_test = clf.score(X_test, y_test)
     print(f"{clf} - Train {clf.metric} -> {score_train}")

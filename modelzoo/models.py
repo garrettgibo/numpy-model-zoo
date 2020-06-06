@@ -112,9 +112,7 @@ class DecisionTree(Model):
         left_entropy = self.entropy(y[left_side])
         right_entropy = self.entropy(y[~left_side])
 
-        return self.entropy(y) - (
-            left_prop * left_entropy + right_prop * right_entropy
-        )
+        return self.entropy(y) - (left_prop * left_entropy + right_prop * right_entropy)
 
     def find_rules(self, X: np.ndarray) -> np.ndarray:
         """Helper method to find the split rules.
@@ -424,31 +422,19 @@ class LinearRegression(Model):
         self.grad_coef = (self.y - y_hat) @ self.X
 
     def gradient_descent(self):
-        """Training function.
-
-        TODO: 6. Calculate the loss with current coefficients.
-              7. Update the temp_coef with learning rate and gradient.
-              8. Calculate the loss with temp_coef.
-              9. Implement the self adeptive learning rate.
-                  a. If current error is less than previous error,
-                  increase learning rate by a factor 1.3.
-                     And update coef, with temp_coef.
-                  b. If previous error is less than current error, decrease
-                  learning rate by a factor of 0.9.
-                     Don't update coef.
-              10. Add the loss to loss list we create.
-        """
+        """Training function """
         self.loss = []
 
         for i in tqdm(range(self.num_iter), desc="Iterations"):
             preds_y_hat = np.array([self.coef.T @ vect for vect in self.X])
+            pre_error = self.square_error(self.y, preds_y_hat)
             self.gradient(preds_y_hat)
 
             # delta rule to find new weights
             temp_coef = self.coef + self.alpha * self.grad_coef
-            preds_new = np.array([temp_coef.T @ vect for vect in self.X])
 
-            pre_error = self.square_error(self.y, pred_y_hat)
+            # predict and find loss from new coefficients
+            preds_new = np.array([temp_coef.T @ vect for vect in self.X])
             current_error = self.square_error(self.y, preds_new)
 
             # This is the early stop, don't modify fllowing three lines.
@@ -457,17 +443,18 @@ class LinearRegression(Model):
             ):
                 self.coef = temp_coef
                 return self
-
+            # adaptive learning rate
             if current_error <= pre_error:
                 self.alpha *= 1.3
                 self.coef = temp_coef
             else:
                 self.alpha *= 0.9
 
+            # track loss for future analysis
             self.loss.append(current_error)
 
             # print values a total of 1000 times during training process
-            if i % self.num_iter // 1000 == 0:
+            if i % (self.num_iter / 100) == 0:
                 print("Iteration: " + str(i))
                 print("Coef: " + str(self.coef))
                 print("Loss: " + str(current_error))
