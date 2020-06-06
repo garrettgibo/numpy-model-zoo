@@ -14,11 +14,12 @@ import click
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from modelzoo.models import InvalidModel, DecisionTree
+from modelzoo.models import InvalidModel, DecisionTree, RandomForest
 
 
 MODELS = {
     "decision-tree": DecisionTree,
+    "random-forest": RandomForest,
 }
 MODELS_HELP = ','.join(list(MODELS.keys()))
 
@@ -28,7 +29,7 @@ def load_data():
     wine = pd.read_csv(url_Wine, delimiter=';')
     X = np.array(wine)[:, :-1]
     y = np.array(wine)[:, -1]
-    y = np.array(y.flatten())
+    y = np.array(y.flatten()).astype(int)
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=0
     )

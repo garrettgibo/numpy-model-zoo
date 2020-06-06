@@ -210,7 +210,7 @@ class DecisionTree(Model):
             if isinstance(self.n_features, int):
                 num_index = self.n_features
             elif isinstance(self.n_features, str):
-                num_index = np.sqrt(self.n_features)
+                num_index = round(np.sqrt(data.shape[1]))
                 np.random.seed()
                 index_col = np.random.choice(data.shape[1], num_index, replace=False)
 
@@ -233,8 +233,11 @@ class DecisionTree(Model):
                 if isinstance(self.n_split, int):
                     num_rules = self.n_split
                 elif isinstance(self.n_split, str):
-                    num_rules = np.sqrt(self.n_split)
+                    num_rules = round(np.sqrt(data.shape[0]))
+                    if num_rules > count_temp_rules:
+                        num_rules = count_temp_rules
                     np.random.seed()
+
                     index_rules = np.random.choice(
                         count_temp_rules, num_rules, replace=False
                     )
@@ -267,7 +270,8 @@ class DecisionTree(Model):
 
 
         """
-        if depth > self.max_depth or first_feature is None:
+        if depth > self.max_depth or first_feature is None \
+                or X.shape[0] == self.size_allowed:
             current.predict = np.argmax(np.bincount(y))
             current.pure = True
             return current
@@ -360,5 +364,112 @@ class DecisionTree(Model):
 
     def score(self, data: np.ndarray, labels: np.array, datatype="Test"):
         pred = self.predict(data)
+        avg_accuracy = (pred == labels).mean()
+        print(f"{datatype} accuracy: {avg_accuracy}")
+
+
+class RandomForest(Model):
+    """
+
+    RandomForest Classifier
+
+    Attributes:
+        n_trees: Number of trees.
+        trees: List store each individule tree
+        n_features: Number of features to use during building each individule tree.
+        n_split: Number of split for each feature.
+        max_depth: Max depth allowed for the tree
+        size_allowed : Min_size split, smallest size allowed for split
+
+    """
+
+    def __init__(
+        self,
+        n_trees=10,
+        n_features="sqrt",
+        n_split="sqrt",
+        max_depth=1000,
+        size_allowed=1,
+    ):
+        """
+        Initilize all Attributes.
+
+        TODO: 1. Intialize n_trees, n_features, n_split, max_depth, size_allowed.
+        DONE
+        """
+        self.n_trees = n_trees
+        self.trees = []
+        self.n_features = n_features
+        self.n_split = n_split
+        self.max_depth = max_depth
+        self.size_allowed = size_allowed
+
+    def fit(self, X: np.ndarray, y: np.array) -> None:
+        """
+        The fit function fits the Random Forest model based on the training data.
+
+        X_train is a matrix or 2-D numpy array, represnting training instances.
+        Each training instance is a feature vector.
+
+        y_train contains the corresponding labels. There might be multiple
+        (i.e., > 2) classes.
+
+
+        TODO: 2. Modify the following for loop to create n_trees tress. by
+        calling DecisionTree we created.
+                 Pass in all the attributes.
+        """
+        self.for_running = y[4]
+
+        for i in range(self.n_trees):
+            np.random.seed()
+            temp_clf = DecisionTree(
+                max_depth=self.max_depth, size_allowed=self.size_allowed,
+                n_features=self.n_features, n_split=self.n_split
+            )
+            temp_clf.fit(X, y)
+            self.trees.append(temp_clf)
+        return self
+
+    def ind_predict(self, vector):
+        """
+        Predict the most likely class label of one test instance based on its
+        feature vector x.
+
+        TODO: 4. Modify the following code to predict using each Decision Tree.
+        """
+        # result = []
+        # for i in self.trees:
+        #     result.append(self.predict(vector))
+        results = np.array([tree.ind_predict(vector) for tree in self.trees])
+
+        """
+        TODO: 5. Modify the following code to find the correct prediction use
+            majority rule.
+                 If there is a tie, use random choice to select one of them.
+        """
+        # labels, counts = [result[0]], [len(result)]
+        labels, counts = np.unique(results, return_counts=True)
+        return labels[np.argmax(counts)]
+
+    def predict_all(self, X: np.ndarray) -> np.array:
+        """
+        X is a matrix or 2-D numpy array, represnting testing instances.
+        Each testing instance is a feature vector.
+
+        Return the predictions of all instances in a list.
+
+        TODO: 6. Revise the following for-loop to call ind_predict to get predictions
+        DONE
+        """
+        # result = []
+        # for i in range(inp.shape[0]):
+        #     result.append(self.for_running)
+        # return result
+        result = np.array([self.ind_predict(vect) for vect in X])
+        return result
+
+    def score(self, data: np.ndarray, labels: np.array, datatype="Test"):
+        pred = self.predict_all(data)
         avg_accuracy = (pred == labels).mean()
         print(f"{datatype} accuracy: {avg_accuracy}")
