@@ -11,6 +11,7 @@ flake8 = "*"
 pandas = "*"
 numpy = "*"
 sklearn = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.8"
