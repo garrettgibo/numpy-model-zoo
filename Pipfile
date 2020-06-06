@@ -10,9 +10,15 @@ flake8 = "*"
 [packages]
 pandas = "*"
 numpy = "*"
+sklearn = "*"
 
 [requires]
 python_version = "3.8"
 
 [pipenv]
 allow_prereleases = true
+
+[scripts]
+format = "black"
+lint = "flake8"
+main = "python main.py"
