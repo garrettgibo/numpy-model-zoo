@@ -14,8 +14,7 @@ import click
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from modelzoo import InvalidModel
-from modelzoo.models import DecisionTree
+from modelzoo.models import InvalidModel, DecisionTree
 
 
 MODELS = {
@@ -36,19 +35,6 @@ def load_data():
     return X_train, X_test, y_train, y_test
 
 
-def evaluate_model(model, X_train, X_test, y_train, y_test):
-    print("-"*10, model, "-"*10)
-
-    pred_train = model.predict(X_train)
-    pred_test = model.predict(X_test)
-
-    avg_train = (pred_train == y_train).mean()
-    avg_test = (pred_test == y_test).mean()
-
-    print(f"Train Error: {avg_train}")
-    print(f"Test Error: {avg_test}")
-
-
 @click.command()
 @click.option("-m", "--model-type", default=None, help=MODELS_HELP)
 def main(model_type):
@@ -59,7 +45,9 @@ def main(model_type):
     clf = model()
     clf.fit(X_train, y_train)
 
-    evaluate_model(clf, X_train, X_test, y_train, y_test)
+    print("-"*10, clf, "-"*10)
+    clf.score(X_train, y_train, datatype="Train")
+    clf.score(X_test, y_test)
 
 
 if __name__ == "__main__":
