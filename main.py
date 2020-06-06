@@ -14,12 +14,14 @@ import click
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from modelzoo.decision_tree import DecisionTree
+from modelzoo import InvalidModel
+from modelzoo.models import DecisionTree
 
 
 MODELS = {
     "decision-tree": DecisionTree,
 }
+MODELS_HELP = ','.join(list(MODELS.keys()))
 
 
 def load_data():
@@ -48,12 +50,12 @@ def evaluate_model(model, X_train, X_test, y_train, y_test):
 
 
 @click.command()
-@click.argument("model_type", default=None)
+@click.option("-m", "--model-type", default=None, help=MODELS_HELP)
 def main(model_type):
     X_train, X_test, y_train, y_test = load_data()
 
     # Load, initialize, and fit model
-    model = MODELS.get(model_type, lambda: "Invalid Model")
+    model = MODELS.get(model_type, lambda: InvalidModel())
     clf = model()
     clf.fit(X_train, y_train)
 

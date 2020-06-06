@@ -1,8 +1,10 @@
 """Custom Decision Tree"""
+import numpy as np
+from modelzoo import Model
 
-class DecisionTree():
+
+class DecisionTree(Model):
     """
-
     Decision Tree Classifier
 
     Attributes:
@@ -15,14 +17,17 @@ class DecisionTree():
 
     """
 
-    def __init__(self, max_depth=1000, size_allowed=1, n_features=None, n_split=None):
+    def __init__(self, max_depth = 1000, size_allowed = 1,
+                 n_features = None, n_split = None):
         """
+
         Initializations for class attributes.
 
         TODO: 1. Modify the initialization of the attributes of the
         Decision Tree classifier
         DONE
         """
+
         self.root = 1
         self.max_depth = max_depth
         self.size_allowed = size_allowed
@@ -31,26 +36,25 @@ class DecisionTree():
 
     class Node():
         """
-            Node Class for the building the tree.
+        Node Class for the building the tree.
 
-            Attribute:
-                threshold: The threshold like if x1 < threshold, for
-                    spliting.
-                feature: The index of feature on this current node.
-                left: Pointer to the node on the left.
-                right: Pointer to the node on the right.
-                pure: Bool, describe if this node is pure.
-                predict: Class, indicate what the most common Y on this
-                    node.
-
+        Attribute:
+            threshold: The threshold like if x1 < threshold, for
+                spliting.
+            feature: The index of feature on this current node.
+            left: Pointer to the node on the left.
+            right: Pointer to the node on the right.
+            pure: Bool, describe if this node is pure.
+            predict: Class, indicate what the most common Y on this
+                node.
         """
         def __init__(self, threshold = None, feature = None):
             """
+            Initializations for class attributes.
 
-                Initializations for class attributes.
-
-                TODO: 2. Modify the initialization of the attributes of
-                    the Node. (Initialize threshold and feature)
+            TODO: 2. Modify the initialization of the attributes of
+                the Node. (Initialize threshold and feature)
+            DONE
             """
             self.threshold = threshold
             self.feature = feature
@@ -60,43 +64,46 @@ class DecisionTree():
             self.depth = 1
             self.predict = 1
 
-    def entropy(self, lst):
+    def entropy(self, lst: np.array):
         """
-            Function Calculate the entropy given lst.
+        Function Calculate the entropy given lst.
 
-            Attributes:
-                entro: variable store entropy for each step.
-                classes: all possible classes. (without repeating terms)
-                counts: counts of each possible classes.
-                total_counts: number of instances in this lst.
+        Attributes:
+            entro: variable store entropy for each step.
+            classes: all possible classes. (without repeating terms)
+            counts: counts of each possible classes.
+            total_counts: number of instances in this lst.
 
-            lst is vector of labels.
+        lst is vector of labels.
 
 
 
-            TODO: 3. Intilize attributes.
-                  4. Modify and add some codes to the following for-loop
-                     to compute the correct entropy.
-                     (make sure count of corresponding label is not 0,
-                     think about why we need to do that.)
+        TODO: 3. Intilize attributes.
+              4. Modify and add some codes to the following for-loop
+                 to compute the correct entropy.
+                 (make sure count of corresponding label is not 0,
+                 think about why we need to do that.)
         """
 
-        entro = 1
+        entro = 0
         classes, counts = np.unique(lst, return_counts=True)
-#         counts = []
-        total_counts = 1
-        for i in []:
-            if True:
-                entro = entro - 0
+        # counts = []
+        total_counts = sum(counts)
+        counts = counts / total_counts  # normalize counts
+        for count in counts:
+            if count == 0:
+                # entro = entro - 0
+                continue
+            entro -= count * np.log(count)
         return entro
 
-    def information_gain(self, lst, values, threshold):
+    def information_gain(self, lst: np.array, values: np.array, threshold):
         """
 
             Function Calculate the information gain, by using entropy
             function.
 
-            lst is vector of labels.
+            lst is vector of labels.D
             values is vector of values for individule feature.
             threshold is the split threshold we want to use for
             calculating the entropy.
@@ -109,13 +116,10 @@ class DecisionTree():
                    Entropy(right node)
                 6. Return information gain.
 
-
+        IG(Z) = H(X) - H(X|Z)
         """
-
-
-
         left_prop = 1
-        right_prop = 1
+        righ_prop = 1
 
         left_entropy = 1
         right_entropy = 1
@@ -123,11 +127,11 @@ class DecisionTree():
 
         return 1
 
-    def find_rules(self, data):
+    def find_rules(self, data: np.ndarray):
 
         """
 
-           Helper function to find the split rules.
+            Helper function to find the split rules.
 
             data is a matrix or 2-D numpy array, represnting training
             instances.
@@ -148,7 +152,7 @@ class DecisionTree():
             rules.append(1)
         return rules
 
-    def next_split(self, data, label):
+    def next_split(self, data: np.ndarray, label: np.array):
         """
             Helper function to find the split with most information
             gain, by using find_rules, and information gain.
@@ -347,7 +351,3 @@ class DecisionTree():
         for i in range(inp.shape[0]):
             result.append(self.for_runing)
         return result
-
-
-
-
