@@ -373,6 +373,7 @@ class LinearRegression(Model):
         early_stop: float = 1e-50,
         intercept: bool = True,
         init_weight: np.ndarray = None,
+        progress: bool = False,
     ):
         """Linear Regression Initialization
 
@@ -387,6 +388,7 @@ class LinearRegression(Model):
         self.early_stop = early_stop
         self.intercept = intercept
         self.init_weight = init_weight  # For testing correctness.
+        self.progress = progress
 
     def fit(self, X: np.ndarray, y: np.array):
         """Save the datasets in our model, and perform gradient descent.
@@ -403,6 +405,7 @@ class LinearRegression(Model):
 
         self.coef = np.random.uniform(-1, 1, self.X.shape[1])
         self.gradient_descent()
+        return self
 
     def square_error(self, y: np.array, y_hat: np.array) -> float:
         """Calculate loss as square error.
@@ -454,8 +457,8 @@ class LinearRegression(Model):
             # track loss for future analysis
             self.loss.append(current_error)
 
-            # print values a total of 1000 times during training process
-            if i % (self.num_iter / 100) == 0:
+            # print values a total of 10 times during training process
+            if self.progress and i % (self.num_iter / 10) == 0:
                 print("Iteration: " + str(i))
                 print("Coef: " + str(self.coef))
                 print("Loss: " + str(current_error))
@@ -536,11 +539,7 @@ class NaiveBayes(Model):
         for key, val in self.likelihood.items():
             self.likelihood[key] /= total_
 
-        """
-            TODO: 5. Think about whether we really need P(X_1 = x_1, X_2 = x_2, ..., X_d = x_d)
-                     in practice?
-                  6. Does this really matter for the final classification results?
-        """
+        return self
 
     def ind_predict(self, x: np.array) -> str:
         """ Predict the most likely class label of one test instance.
