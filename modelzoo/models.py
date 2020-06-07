@@ -12,7 +12,7 @@ class Model(ABC):
         return self.__class__.__name__
 
     @abstractmethod
-    def score(self, data, labels):
+    def score(self, X, y):
         pass
 
 
@@ -78,14 +78,14 @@ class DecisionTree(Model):
             self.depth = 1
             self.predict = -1
 
-    def entropy(self, labels: np.array) -> float:
-        """Calculate entropy for provided labels.
+    def entropy(self, y: np.array) -> float:
+        """Calculate entropy for provided y.
 
-        :param labels: vector of labels to calculate entropy on
+        :param y: vector of y to calculate entropy on
         :returns: calculated entropy
         """
         entro = 0
-        classes, counts = np.unique(labels, return_counts=True)
+        classes, counts = np.unique(y, return_counts=True)
         counts = counts / sum(counts)  # normalize counts to get prob of class
         for count in counts:
             if count == 0:
@@ -94,14 +94,14 @@ class DecisionTree(Model):
         return entro
 
     def information_gain(
-        self, values: np.array, labels: np.array, threshold: float
+        self, values: np.array, y: np.array, threshold: float
     ) -> float:
         """Calculate the information gain, by using entropy function.
 
         IG(Z) = H(X) - H(X|Z)
 
         :param values: single vector of values to calculate IG
-        :param labels: vector of all labels
+        :param y: vector of all y
         :param threshold: threshold to calculate IG off of
         :returns: calculate IG based off information gain formula
         """
@@ -109,54 +109,52 @@ class DecisionTree(Model):
         left_prop = len(values[left_side]) / len(values)
         right_prop = 1 - left_prop
 
-        left_entropy = self.entropy(labels[left_side])
-        right_entropy = self.entropy(labels[~left_side])
+        left_entropy = self.entropy(y[left_side])
+        right_entropy = self.entropy(y[~left_side])
 
-        return self.entropy(labels) - (
-            left_prop * left_entropy + right_prop * right_entropy
-        )
+        return self.entropy(y) - (left_prop * left_entropy + right_prop * right_entropy)
 
-    def find_rules(self, data: np.ndarray) -> np.ndarray:
+    def find_rules(self, X: np.ndarray) -> np.ndarray:
         """Helper method to find the split rules.
 
         Splitting rules are found by finding all unique values in a feature,
         then finding all the midpoints for the unique values.
 
-        :param data: matrix or 2-D numpy array, represnting training instances
+        :param X: matrix or 2-D numpy array, represnting training instances
         :returns: 2-D array of all possible splits for features
         """
         rules = []
-        # transpose data to get features(columns)
-        for feature in data.T:
+        # transpose X to get features(columns)
+        for feature in X.T:
             unique_values = np.unique(feature)
             mids = np.mean([unique_values[:-1], unique_values[1:]], axis=0)
             rules.append(mids)
         return rules
 
-    def next_split(self, data: np.ndarray, labels: np.array) -> Tuple[float, int]:
+    def next_split(self, X: np.ndarray, y: np.array) -> Tuple[float, int]:
         """Helper method to find the split with most information.
 
-        :param data: matrix or 2-D numpy array, represnting training instances
+        :param X: matrix or 2-D numpy array, represnting training instances
             Each training instance is a feature vector.
-        :param labels: label contains the corresponding labels. There might be
+        :param y: label contains the corresponding y. There might be
             multiple (i.e., > 2) classes.
         """
-        rules = self.find_rules(data)
+        rules = self.find_rules(X)
         max_info = -1
         num_col = 1
         threshold = 1
 
         # when number of features wasn't set, use all features
         if self.n_features is None:
-            index_col = np.arange(data.shape[1])
+            index_col = np.arange(X.shape[1])
         else:
             if isinstance(self.n_features, int):
                 num_index = self.n_features
             # if num of featuers is 'sqrt' use sqrt of total number of features
             elif isinstance(self.n_features, str):
-                num_index = round(np.sqrt(data.shape[1]))
+                num_index = round(np.sqrt(X.shape[1]))
                 np.random.seed()
-                index_col = np.random.choice(data.shape[1], num_index, replace=False)
+                index_col = np.random.choice(X.shape[1], num_index, replace=False)
 
         # Moving through columns
         for i in index_col:
@@ -169,7 +167,7 @@ class DecisionTree(Model):
                 if isinstance(self.n_split, int):
                     num_rules = self.n_split
                 elif isinstance(self.n_split, str):
-                    num_rules = round(np.sqrt(data.shape[0]))
+                    num_rules = round(np.sqrt(X.shape[0]))
                     if num_rules > count_temp_rules:
                         num_rules = count_temp_rules
                     np.random.seed()
@@ -179,7 +177,7 @@ class DecisionTree(Model):
 
             # find split and threshold that results in maximum information gain
             for j in index_rules:
-                info = self.information_gain(data.T[i], labels, rules[i][j])
+                info = self.information_gain(X.T[i], y, rules[i][j])
                 if info > max_info:
                     max_info = info
                     num_col = i
@@ -189,8 +187,8 @@ class DecisionTree(Model):
     def build_tree(self, X: np.ndarray, y: np.array, depth: int) -> Node:
         """ Helper function for building the tree.
 
-        :param X: full data set to train from
-        :param y: full vector of labels
+        :param X: full X set to train from
+        :param y: full vector of y
         :returns: root Node
         """
         first_threshold, first_feature = self.next_split(X, y)
@@ -235,12 +233,13 @@ class DecisionTree(Model):
         return current
 
     def fit(self, X: np.ndarray, y: np.array):
-        """ Fits the Decision Tree model based on the training data.
+        """ Fits the Decision Tree model based on the training X.
 
         :param X: matrix or 2-D numpy array, represnting training instances.
             Each training instance is a feature vector.
-        :param y: labels for data. There might be multiple (i.e., > 2) classes.
+        :param y: y for X. There might be multiple (i.e., > 2) classes.
         """
+        y = y.astype(int)  # y need to have integer classes
         self.root = self.build_tree(X, y, 1)
         return self
 
@@ -261,26 +260,25 @@ class DecisionTree(Model):
         return current.predict
 
     def predict(self, X: np.ndarray) -> np.array:
-        """Predict labels for entire dataset.
+        """Predict y for entire Xset.
 
         :param X: matrix or 2-D numpy array, represnting training instances.
             Each training instance is a feature vector.
-        :param y: labels for data. There might be multiple (i.e., > 2) classes.
         :returns: predictions of all instances in a list.
         """
         return np.array([self.ind_predict(vect) for vect in X])
 
-    def score(self, data: np.ndarray, labels: np.array, datatype="Test") -> float:
+    def score(self, X: np.ndarray, y: np.array) -> float:
         """Wrapper around predict to also get accuracy.
 
-        :param data: matrix or 2-D numpy array, represnting training instances.
+        :param X: matrix or 2-D numpy array, represnting training instances.
             Each training instance is a feature vector.
-        :param labels: labels for data. There might be multiple (i.e., > 2) classes.
+        :param y: y for X. There might be multiple (i.e., > 2) classes.
         :returns: avg_accuracy of predictions
         """
-        pred = self.predict(data)
-        avg_accuracy = (pred == labels).mean()
-        print(f"{datatype} accuracy: {avg_accuracy}")
+        self.metric = "Accuracy"
+        pred = self.predict(X)
+        avg_accuracy = (pred == y).mean()
         return avg_accuracy
 
 
@@ -313,12 +311,13 @@ class RandomForest(Model):
         self.size_allowed = size_allowed
 
     def fit(self, X: np.ndarray, y: np.array) -> None:
-        """ Fits the Random Forest model based on the training data.
+        """ Fits the Random Forest model based on the training X.
 
         :param X: matrix or 2-D numpy array, represnting training instances.
             Each training instance is a feature vector.
-        :param y: labels for data. There might be multiple (i.e., > 2) classes.
+        :param y: y for X. There might be multiple (i.e., > 2) classes.
         """
+        y = y.astype(int)  # y need to have integer classes
         for i in tqdm(range(self.n_trees), desc="Fitting Forest"):
             np.random.seed()
             # initialize tree with all parameters from forest
@@ -340,28 +339,243 @@ class RandomForest(Model):
         """
         # predict using majority rule from doing predictions from all trees
         results = np.array([tree.ind_predict(vector) for tree in self.trees])
-        labels, counts = np.unique(results, return_counts=True)
-        return labels[np.argmax(counts)]
+        y, counts = np.unique(results, return_counts=True)
+        return y[np.argmax(counts)]
 
     def predict_all(self, X: np.ndarray) -> np.array:
-        """Predict labels for entire dataset.
+        """Predict y for entire Xset.
 
         :param X: matrix or 2-D numpy array, represnting training instances.
             Each training instance is a feature vector.
-        :param y: labels for data. There might be multiple (i.e., > 2) classes.
         :returns: predictions of all instances in a list.
         """
         return np.array([self.ind_predict(vect) for vect in X])
 
-    def score(self, data: np.ndarray, labels: np.array, datatype="Test"):
+    def score(self, X: np.ndarray, y: np.array):
         """Wrapper around predict_all to also get accuracy.
 
-        :param data: matrix or 2-D numpy array, represnting training instances.
+        :param X: matrix or 2-D numpy array, represnting training instances.
             Each training instance is a feature vector.
-        :param labels: labels for data. There might be multiple (i.e., > 2) classes.
+        :param y: y for X. There might be multiple (i.e., > 2) classes.
         :returns: avg_accuracy of predictions
         """
-        pred = self.predict_all(data)
-        avg_accuracy = (pred == labels).mean()
-        print(f"{datatype} accuracy: {avg_accuracy}")
+        self.metric = "Accuracy"
+        pred = self.predict_all(X)
+        avg_accuracy = (pred == y).mean()
         return avg_accuracy
+
+
+class LinearRegression(Model):
+    def __init__(
+        self,
+        alpha: float = 1e-10,
+        num_iter: int = 10000,
+        early_stop: float = 1e-50,
+        intercept: bool = True,
+        init_weight: np.ndarray = None,
+    ):
+        """Linear Regression Initialization
+
+        :param alpha: learning rate
+        :param num_iter: number of iterations to update coefficient with training X
+        :param early_stop: Constant control early_stop.
+        :param intercept: Bool, If we are going to fit a intercept, default True.
+        :param init_weight: Matrix (n x 1), input init_weight for testing.
+        """
+        self.alpha = alpha
+        self.num_iter = num_iter
+        self.early_stop = early_stop
+        self.intercept = intercept
+        self.init_weight = init_weight  # For testing correctness.
+
+    def fit(self, X: np.ndarray, y: np.array):
+        """Save the datasets in our model, and perform gradient descent.
+
+        :param X: Matrix or 2-D array. Input feature matrix.
+        :param y: Matrix or 2-D array. Input target value.
+        """
+        self.X = X
+        self.y = y.T
+
+        if self.intercept:
+            # add column of ones to left side of matrix
+            self.X = np.hstack([np.ones((self.X.shape[0], 1)), self.X])
+
+        self.coef = np.random.uniform(-1, 1, self.X.shape[1])
+        self.gradient_descent()
+
+    def square_error(self, y: np.array, y_hat: np.array) -> float:
+        """Calculate loss as square error.
+
+        error = ∑(Y_i − Y_i_hat)^2
+        :param y: labels
+        :param y_hat: predictions
+        :returns: square error
+        """
+        return sum(np.square(y - y_hat))
+
+    def gradient(self, y_hat: np.array) -> None:
+        """Helper function to calculate the gradient respect to coefficient.
+
+        :param y_hat:
+        """
+        self.grad_coef = (self.y - y_hat) @ self.X
+
+    def gradient_descent(self):
+        """Training function """
+        self.loss = []
+
+        for i in tqdm(range(self.num_iter), desc="Iterations"):
+            preds_y_hat = np.array([self.coef.T @ vect for vect in self.X])
+            pre_error = self.square_error(self.y, preds_y_hat)
+            self.gradient(preds_y_hat)
+
+            # delta rule to find new weights
+            temp_coef = self.coef + self.alpha * self.grad_coef
+
+            # predict and find loss from new coefficients
+            preds_new = np.array([temp_coef.T @ vect for vect in self.X])
+            current_error = self.square_error(self.y, preds_new)
+
+            # This is the early stop, don't modify fllowing three lines.
+            if (abs(pre_error - current_error) < self.early_stop) | (
+                abs(abs(pre_error - current_error) / pre_error) < self.early_stop
+            ):
+                self.coef = temp_coef
+                print("Early Stopping")
+                return self
+            # adaptive learning rate
+            if current_error <= pre_error:
+                self.alpha *= 1.3
+                self.coef = temp_coef
+            else:
+                self.alpha *= 0.9
+
+            # track loss for future analysis
+            self.loss.append(current_error)
+
+            # print values a total of 1000 times during training process
+            if i % (self.num_iter / 100) == 0:
+                print("Iteration: " + str(i))
+                print("Coef: " + str(self.coef))
+                print("Loss: " + str(current_error))
+        return self
+
+    def ind_predict(self, x: np.array) -> float:
+        """Predict the value based on its feature vector x.
+
+        :param x: Matrix, array or list. Input feature point.
+        :returns: prediction of given X point
+        """
+        return self.coef.T @ x
+
+    def predict(self, X: np.ndarray) -> np.array:
+        """predict value for all x
+
+        :param x: matrix/2-d numpy array, represnting testing instances.
+        :returns: prediction of given x matrix
+        """
+        if self.intercept:
+            # add column of ones to left side of matrix
+            X = np.hstack([np.ones((X.shape[0], 1)), X])
+        return np.array([self.ind_predict(vect) for vect in X])
+
+    def score(self, X: np.ndarray, y: np.array) -> float:
+        """Calculate squared error.
+
+        :param X: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param y: y for X
+        :returns: square error of predictions
+        """
+        self.metric = "Square Error"
+        square_error = sum(self.predict(X) - y)
+        return square_error
+
+
+class NaiveBayes(Model):
+    """Naive Bayes classifer
+
+    Attributes:
+        prior: P(Y)
+        likelihood: P(X_j | Y)
+    """
+
+    def fit(self, X_train: np.array, y_train: np.array):
+        """Fits the Naive Bayes model based on the training data.
+
+        Here, we assume that all the features are **discrete** features.
+
+        :param X_train: matrix or 2-D numpy array, represnting training instances.
+        :param y_train: contains the corresponding labels.
+        """
+
+        self.y = y_train
+        X_train = np.array(X_train)
+
+        # compute prior distributions
+        self.prior = dict()
+        values, counts = np.unique(self.y, return_counts=True)
+        counts = counts / sum(counts)
+        # priors are simply normalized counts of labels
+        for val, count in zip(values, counts):
+            self.prior[f"Y = {val}"] = count
+
+        # compute likelihoods P(X_j | Y)
+        self.likelihood = dict()
+        for x, y in zip(X_train, y_train):
+            for j in range(len(x)):
+                # simply count occurrences
+                if f"X{j} = {x[j]} | Y = {y}" not in self.likelihood:
+                    self.likelihood[f"X{j} = {x[j]} | Y = {y}"] = 1
+                else:
+                    self.likelihood[f"X{j} = {x[j]} | Y = {y}"] += 1
+
+        # normalize distributions
+        total_ = sum(self.likelihood.values())
+        for key, val in self.likelihood.items():
+            self.likelihood[key] /= total_
+
+        """
+            TODO: 5. Think about whether we really need P(X_1 = x_1, X_2 = x_2, ..., X_d = x_d)
+                     in practice?
+                  6. Does this really matter for the final classification results?
+        """
+
+    def ind_predict(self, x: np.array) -> str:
+        """ Predict the most likely class label of one test instance.
+        """
+        # initially set return values to a random label; this will make it so
+        # when an unknown feature is entered, a random label will be assigned
+        # instead of none
+        ret, max_prob = np.random(self.y), 0
+        # iterate through all labels and compute likelihood
+        for y in self.y:
+            prob = self.prior[f"Y = {y}"]
+            for j in range(len(x)):
+                prob *= self.likelihood[f"X{j} = {x[j]} | Y = {y}"]
+            # pick label with highest probability
+            if prob > max_prob:
+                max_prob = prob
+                ret = y
+        return ret
+
+    def predict(self, X):
+        """predict value for all x
+
+        :param x: matrix/2-d numpy array, represnting testing instances.
+        :returns: prediction of given x matrix
+        """
+        return [self.ind_predict(vect) for vect in np.array(X)]
+
+    def score(self, X: np.ndarray, y: np.array) -> float:
+        """Calculate average accuracy
+
+        :param X: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param y: y for X
+        :returns: accuracy of predictions
+        """
+        self.metric = "Accuracy"
+        accuracy = (self.predict(X) == y).mean()
+        return accuracy

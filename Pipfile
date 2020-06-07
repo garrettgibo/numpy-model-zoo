@@ -22,6 +22,6 @@ allow_prereleases = true
 
 [scripts]
 format = "black"
-lint = "flake8"
+lint = "flake8 --ignore=E501,W503"
 main = "python main.py"
 notebook = "jupyter notebook"
