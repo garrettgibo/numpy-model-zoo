@@ -442,6 +442,7 @@ class LinearRegression(Model):
                 abs(abs(pre_error - current_error) / pre_error) < self.early_stop
             ):
                 self.coef = temp_coef
+                print("Early Stopping")
                 return self
             # adaptive learning rate
             if current_error <= pre_error:
@@ -469,10 +470,10 @@ class LinearRegression(Model):
         return self.coef.T @ x
 
     def predict(self, X: np.ndarray) -> np.array:
-        """Predict value for all X
+        """predict value for all x
 
-        :param X: matrix/2-D numpy array, represnting testing instances.
-        :returns: prediction of given X matrix
+        :param x: matrix/2-d numpy array, represnting testing instances.
+        :returns: prediction of given x matrix
         """
         if self.intercept:
             # add column of ones to left side of matrix
@@ -490,3 +491,91 @@ class LinearRegression(Model):
         self.metric = "Square Error"
         square_error = sum(self.predict(X) - y)
         return square_error
+
+
+class NaiveBayes(Model):
+    """Naive Bayes classifer
+
+    Attributes:
+        prior: P(Y)
+        likelihood: P(X_j | Y)
+    """
+
+    def fit(self, X_train: np.array, y_train: np.array):
+        """Fits the Naive Bayes model based on the training data.
+
+        Here, we assume that all the features are **discrete** features.
+
+        :param X_train: matrix or 2-D numpy array, represnting training instances.
+        :param y_train: contains the corresponding labels.
+        """
+
+        self.y = y_train
+        X_train = np.array(X_train)
+
+        # compute prior distributions
+        self.prior = dict()
+        values, counts = np.unique(self.y, return_counts=True)
+        counts = counts / sum(counts)
+        # priors are simply normalized counts of labels
+        for val, count in zip(values, counts):
+            self.prior[f"Y = {val}"] = count
+
+        # compute likelihoods P(X_j | Y)
+        self.likelihood = dict()
+        for x, y in zip(X_train, y_train):
+            for j in range(len(x)):
+                # simply count occurrences
+                if f"X{j} = {x[j]} | Y = {y}" not in self.likelihood:
+                    self.likelihood[f"X{j} = {x[j]} | Y = {y}"] = 1
+                else:
+                    self.likelihood[f"X{j} = {x[j]} | Y = {y}"] += 1
+
+        # normalize distributions
+        total_ = sum(self.likelihood.values())
+        for key, val in self.likelihood.items():
+            self.likelihood[key] /= total_
+
+        """
+            TODO: 5. Think about whether we really need P(X_1 = x_1, X_2 = x_2, ..., X_d = x_d)
+                     in practice?
+                  6. Does this really matter for the final classification results?
+        """
+
+    def ind_predict(self, x: np.array) -> str:
+        """ Predict the most likely class label of one test instance.
+        """
+        # initially set return values to a random label; this will make it so
+        # when an unknown feature is entered, a random label will be assigned
+        # instead of none
+        ret, max_prob = np.random(self.y), 0
+        # iterate through all labels and compute likelihood
+        for y in self.y:
+            prob = self.prior[f"Y = {y}"]
+            for j in range(len(x)):
+                prob *= self.likelihood[f"X{j} = {x[j]} | Y = {y}"]
+            # pick label with highest probability
+            if prob > max_prob:
+                max_prob = prob
+                ret = y
+        return ret
+
+    def predict(self, X):
+        """predict value for all x
+
+        :param x: matrix/2-d numpy array, represnting testing instances.
+        :returns: prediction of given x matrix
+        """
+        return [self.ind_predict(vect) for vect in np.array(X)]
+
+    def score(self, X: np.ndarray, y: np.array) -> float:
+        """Calculate average accuracy
+
+        :param X: matrix or 2-D numpy array, represnting training instances.
+            Each training instance is a feature vector.
+        :param y: y for X
+        :returns: accuracy of predictions
+        """
+        self.metric = "Accuracy"
+        accuracy = (self.predict(X) == y).mean()
+        return accuracy

@@ -19,20 +19,22 @@ from modelzoo.models import (
     DecisionTree,
     RandomForest,
     LinearRegression,
+    NaiveBayes,
 )
 
 
 MODELS = {
     "decision-tree": DecisionTree,
     "random-forest": RandomForest,
-    "linear-regression": LinearRegression
+    "linear-regression": LinearRegression,
+    "naive-bayes": NaiveBayes,
 }
-MODELS_HELP = ','.join(list(MODELS.keys()))
+MODELS_HELP = ",".join(list(MODELS.keys()))
 
 
 def load_data(test_size):
     url_Wine = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
-    wine = pd.read_csv(url_Wine, delimiter=';')
+    wine = pd.read_csv(url_Wine, delimiter=";")
     X = np.array(wine)[:, :-1]
     y = np.array(wine)[:, -1]
     y = np.array(y.flatten()).astype(int)
