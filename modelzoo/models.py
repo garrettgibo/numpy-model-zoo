@@ -427,6 +427,7 @@ class LinearRegression(Model):
     def gradient_descent(self):
         """Training function """
         self.loss = []
+        self.alphas = [self.alpha]
 
         for i in tqdm(range(self.num_iter), desc="Iterations"):
             preds_y_hat = np.array([self.coef.T @ vect for vect in self.X])
@@ -453,6 +454,8 @@ class LinearRegression(Model):
                 self.coef = temp_coef
             else:
                 self.alpha *= 0.9
+            # track learning rates
+            self.alphas.append(self.alpha)
 
             # track loss for future analysis
             self.loss.append(current_error)
@@ -542,12 +545,11 @@ class NaiveBayes(Model):
         return self
 
     def ind_predict(self, x: np.array) -> str:
-        """ Predict the most likely class label of one test instance.
-        """
+        """Predict the most likely class label of one test instance."""
         # initially set return values to a random label; this will make it so
         # when an unknown feature is entered, a random label will be assigned
         # instead of none
-        ret, max_prob = np.random(self.y), 0
+        ret, max_prob = np.random.choice(self.y), 0
         # iterate through all labels and compute likelihood
         for y in self.y:
             prob = self.prior[f"Y = {y}"]
